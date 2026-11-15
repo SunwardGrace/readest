@@ -1,0 +1,133 @@
+name: Build Readest Personal
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [personal]
+    paths-ignore:
+      - '**/*.md'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: personal-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @readest/readest-app setup-vendors
+      - run: pnpm lint
+      - run: pnpm test --run
+
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            target: x86_64-pc-windows-msvc
+          - os: ubuntu-latest
+            platform: android
+            target: aarch64-linux-android
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 110
+    defaults:
+      run:
+        shell: bash
+    env:
+      NEXT_PUBLIC_APP_PLATFORM: tauri
+      NEXT_PUBLIC_SELF_HOSTED: 'true'
+      NEXT_PUBLIC_DISABLE_UPDATER: 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        if: matrix.platform == 'android'
+        with:
+          distribution: zulu
+          java-version: '17'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
+        if: matrix.platform == 'android'
+        with:
+          packages: platform-tools
+      - name: Install Android NDK
+        if: matrix.platform == 'android'
+        run: |
+          sdkmanager "ndk;28.2.13676358"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/28.2.13676358" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@c8037a86dde8214a8310e9f54a8fc61ab362aa31 # v2
+        with:
+          key: personal-${{ matrix.platform }}-${{ matrix.target }}
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @readest/readest-app setup-vendors
+      - name: Initialize Android and restore Readest's native customizations
+        if: matrix.platform == 'android'
+        working-directory: apps/readest-app
+        run: |
+          pnpm tauri android init
+          git restore src-tauri/gen/android
+      - name: Prepare personal configuration
+        run: node scripts/prepare-personal-build.mjs
+      - name: Install personal Android signing key
+        if: matrix.platform == 'android'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PERSONAL_ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.PERSONAL_ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE_BASE64" && test -n "$KEYSTORE_PASSWORD"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/readest-personal.jks"
+          {
+            printf 'keyAlias=readest-personal\n'
+            printf 'password=%s\n' "$KEYSTORE_PASSWORD"
+            printf 'storeFile=%s/readest-personal.jks\n' "$RUNNER_TEMP"
+          } > apps/readest-app/src-tauri/gen/android/keystore.properties
+      - name: Build Windows installer
+        if: matrix.platform == 'windows'
+        run: pnpm tauri build --target x86_64-pc-windows-msvc --bundles nsis
+      - name: Build Android APK
+        if: matrix.platform == 'android'
+        run: pnpm tauri android build -t aarch64 --apk
+      - name: Upload Windows installer
+        if: matrix.platform == 'windows'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Readest-Personal-Windows-x64
+          path: target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload Android APK
+        if: matrix.platform == 'android'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Readest-Personal-Android-arm64
+          path: apps/readest-app/src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
+          if-no-files-found: error
+          retention-days: 30
+      - name: Remove signing material
+        if: always() && matrix.platform == 'android'
+        run: |
+          rm -f "$RUNNER_TEMP/readest-personal.jks"
+          rm -f apps/readest-app/src-tauri/gen/android/keystore.properties
