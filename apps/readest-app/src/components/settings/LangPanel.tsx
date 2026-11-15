@@ -15,7 +15,10 @@ import {
 } from '@/services/translators';
 import { isTranslationAvailable } from '@/services/translators/utils';
 import { DEFAULT_PROMPT_ID, isCustomTranslatorName } from '@/services/translators/custom';
-import { useCustomTranslatorStore } from '@/store/customTranslatorStore';
+import {
+  ensureCustomTranslatorsLoaded,
+  useCustomTranslatorStore,
+} from '@/store/customTranslatorStore';
 import { getLocale } from '@/utils/misc';
 import { isCustomTranslatorAllowed } from '@/utils/access';
 import { navigateToLogin, navigateToProfile } from '@/utils/nav';
@@ -84,6 +87,10 @@ const LangPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset 
   const [showCustomDictionaries, setShowCustomDictionaries] = useState(false);
   const [showCustomTranslators, setShowCustomTranslators] = useState(false);
   const [showWordLens, setShowWordLens] = useState(false);
+
+  useEffect(() => {
+    ensureCustomTranslatorsLoaded(envConfig);
+  }, [envConfig]);
 
   // Translation is unavailable for PDFs and for books already in the target
   // language (issue #5600). The reader toolbar's toggler has always refused

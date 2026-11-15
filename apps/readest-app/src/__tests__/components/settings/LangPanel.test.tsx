@@ -12,16 +12,21 @@
  * an already-on book stays toggleable so the user can turn it back off.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, cleanup, screen, fireEvent } from '@testing-library/react';
+import { render, cleanup, screen, fireEvent, waitFor } from '@testing-library/react';
 
 import LangPanel from '@/components/settings/LangPanel';
 import { saveViewSettings } from '@/helpers/settings';
+import { useCustomTranslatorStore } from '@/store/customTranslatorStore';
 import type { Book, BookFormat, ViewSettings } from '@/types/book';
+import type { CustomTranslator, TranslationPrompt } from '@/types/translation';
 
 const state = vi.hoisted(() => ({
   format: 'EPUB' as BookFormat,
   primaryLanguage: 'fr',
   translationEnabled: false,
+  translationProvider: 'deepl',
+  customTranslators: [] as CustomTranslator[],
+  translationPrompts: [] as TranslationPrompt[],
   token: null as string | null,
   user: null as { id: string } | null,
   push: vi.fn(),
@@ -60,7 +65,7 @@ const viewSettings = () =>
   ({
     uiLanguage: '',
     translationEnabled: state.translationEnabled,
-    translationProvider: 'deepl',
+    translationProvider: state.translationProvider,
     translateTargetLang: 'en',
     showTranslateSource: true,
     ttsReadAloudText: 'both',
@@ -70,7 +75,11 @@ const viewSettings = () =>
 
 vi.mock('@/store/settingsStore', () => {
   const store = () => ({
-    settings: { globalViewSettings: viewSettings() },
+    settings: {
+      globalViewSettings: viewSettings(),
+      customTranslators: state.customTranslators,
+      translationPrompts: state.translationPrompts,
+    },
     applyUILanguage: vi.fn(),
     activeSettingsItemId: null,
     setActiveSettingsItemId: vi.fn(),
@@ -164,6 +173,55 @@ const sessionToken = (claims: object) => `${encode({ alg: 'none' })}.${encode(cl
 
 const getCustomTranslatorsRow = () =>
   screen.getByText('Custom Translators').closest('button') as HTMLButtonElement;
+
+describe('LangPanel — saved custom translators after restart', () => {
+  afterEach(() => {
+    cleanup();
+    state.token = null;
+    state.translationProvider = 'deepl';
+    state.customTranslators = [];
+    state.translationPrompts = [];
+    useCustomTranslatorStore.setState({ translators: [], prompts: [], loaded: false });
+  });
+
+  it('shows the saved translator and prompts without first opening their sub-page', async () => {
+    state.token = sessionToken({ plan: 'plus' });
+    state.translationProvider = 'custom:saved-translator';
+    state.customTranslators = [
+      {
+        id: 'saved-translator',
+        type: 'openai-compatible',
+        name: 'My translator',
+        baseUrl: 'https://translate.example/v1',
+        model: 'my-model',
+        addedAt: 1,
+        updatedAt: 1,
+      },
+    ];
+    state.translationPrompts = [
+      {
+        id: 'saved-prompt',
+        name: 'My prompt',
+        systemPrompt: 'Translate to {{targetLang}}.',
+        addedAt: 1,
+        updatedAt: 1,
+      },
+    ];
+    useCustomTranslatorStore.setState({ translators: [], prompts: [], loaded: false });
+    vi.mocked(saveViewSettings).mockClear();
+
+    render(<LangPanel bookKey='book-1' onRegisterReset={vi.fn()} />);
+
+    await waitFor(() => {
+      expect((screen.getByLabelText('Translation Service') as HTMLSelectElement).value).toBe(
+        'custom:saved-translator',
+      );
+    });
+    expect(screen.getByRole('option', { name: 'My translator' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'My prompt' })).toBeTruthy();
+    expect(vi.mocked(saveViewSettings)).not.toHaveBeenCalled();
+  });
+});
 
 // Custom translators are a premium feature: free and signed-out readers see the
 // row with a Premium badge that routes to the upgrade page or sign-in.
