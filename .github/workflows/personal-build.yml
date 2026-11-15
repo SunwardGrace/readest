@@ -12,7 +12,7 @@ permissions:
 
 concurrency:
   group: personal-build-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   check:
@@ -29,6 +29,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @readest/readest-app setup-vendors
+      - run: node --test scripts/prepare-personal-build.test.mjs
       - run: pnpm lint
       - run: pnpm test --run
 
@@ -81,6 +82,7 @@ jobs:
       - uses: Swatinem/rust-cache@c8037a86dde8214a8310e9f54a8fc61ab362aa31 # v2
         with:
           key: personal-${{ matrix.platform }}-${{ matrix.target }}
+          cache-on-failure: true
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @readest/readest-app setup-vendors
       - name: Initialize Android and restore Readest's native customizations
@@ -88,6 +90,7 @@ jobs:
         working-directory: apps/readest-app
         run: |
           pnpm tauri android init
+          pnpm tauri icon ../../data/icons/readest-book.png
           git restore src-tauri/gen/android
       - name: Prepare personal configuration
         run: node scripts/prepare-personal-build.mjs
@@ -110,6 +113,15 @@ jobs:
       - name: Build Android APK
         if: matrix.platform == 'android'
         run: pnpm tauri android build -t aarch64 --apk
+      - name: Verify Android package identity and signature
+        if: matrix.platform == 'android'
+        run: |
+          apk=apps/readest-app/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk
+          signer=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n 1)
+          "$signer" verify --verbose --print-certs "$apk"
+          "${signer%/*}/aapt" dump badging "$apk" > "$RUNNER_TEMP/apk-badging.txt"
+          grep -F "package: name='com.sunwardgrace.readest'" "$RUNNER_TEMP/apk-badging.txt"
+          grep -F "application-label:'Readest Personal'" "$RUNNER_TEMP/apk-badging.txt"
       - name: Upload Windows installer
         if: matrix.platform == 'windows'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

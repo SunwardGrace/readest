@@ -46,6 +46,12 @@ export function preparePersonalBuild(root) {
         const source = fs.readFileSync(filename, 'utf8');
         let result = source.replaceAll(officialId, personalId);
         if (entry.name === 'AndroidManifest.xml') {
+          // Android init generated app_name before the personal profile was
+          // applied. Setting productName alone does not change that resource.
+          result = result.replace(
+            'android:label="@string/app_name"',
+            'android:label="Readest Personal"',
+          );
           // Keep file/share intents, but don't claim the official OAuth and
           // app-link URLs. Those integrations need their own OAuth registration.
           result = result.replace(/<intent-filter\b[\s\S]*?<\/intent-filter>/g, (filter) =>
