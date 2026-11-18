@@ -37,3 +37,21 @@ export interface TranslationPrompt {
   deletedAt?: number;
   reincarnation?: string;
 }
+
+export interface TranslationRegister {
+  at: number;
+  writer: string;
+  value: unknown;
+}
+
+export type TranslationRecords = Record<string, TranslationRegister>;
+
+/** Device-local pairing and merge state. Never backed up or sent as settings. */
+export interface TranslationFileSyncSettings {
+  enabled: boolean;
+  pairingCode: string;
+  writer: string;
+  connection: string;
+  records: TranslationRecords;
+  lastSyncedAt?: number;
+}

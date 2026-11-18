@@ -2763,5 +2763,19 @@
   "No reading activity on this day": "当天没有阅读记录",
   "See which books you read each day and for how long": "查看每天读过的书籍和阅读时长",
   "Move to parent group": "移到上层",
-  "Done": "完成"
+  "Done": "完成",
+  "Translation settings sync": "翻译设置同步",
+  "Sync translators, API keys, prompts and translation defaults through WebDAV. Configuration is encrypted before upload.": "通过 WebDAV 同步翻译器、API 密钥、提示词和默认翻译选项。配置会在上传前加密。",
+  "Sync translation settings": "同步翻译设置",
+  "Pairing code": "配对码",
+  "Enter this code once on your other device. Keep it private: it unlocks your synced API keys.": "在其他设备上输入一次此配对码即可。请妥善保存，它可以解密同步的 API 密钥。",
+  "Hide pairing code": "隐藏配对码",
+  "Show pairing code": "显示配对码",
+  "Copy pairing code": "复制配对码",
+  "Start on the device with the settings you want to keep. On other devices, enter its pairing code to adopt those translation settings.": "先在保存了所需配置的设备上开启同步，再在其他设备输入配对码，以采用该设备的翻译设置。",
+  "Start with this device": "以本机设置开启同步",
+  "Pairing code from another device": "另一台设备的配对码",
+  "Use settings from another device": "使用另一台设备的设置",
+  "Translation settings synced": "翻译设置已同步",
+  "Translation sync failed. Check your connection and pairing code.": "翻译设置同步失败，请检查连接和配对码。"
 }

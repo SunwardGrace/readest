@@ -54,6 +54,8 @@ export interface BackupOptions {
  * the current device's value for every path here — see issue #4098.
  */
 export const BACKUP_SETTINGS_BLACKLIST = [
+  // Pairing secret, device writer ID and merge journal are local to this install.
+  'translationFileSync',
   // Device filesystem paths — invalid on another device / OS.
   'localBooksDir',
   'customRootDir',

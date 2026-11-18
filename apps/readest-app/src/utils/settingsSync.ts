@@ -52,6 +52,8 @@ export interface CloudSyncProviderFlags {
 }
 
 export interface SettingsSyncPayload {
+  /** Notification only: peers read translation credentials from local disk. */
+  translationSettingsChanged?: boolean;
   bookshelves?: SystemSettings['bookshelves'];
   /** Label of the window that persisted the change, so receivers ignore their own echo. */
   sourceLabel: string;
@@ -122,6 +124,7 @@ export const broadcastGlobalSettings = async (
       bookshelves: settings.bookshelves,
       globalViewSettings: settings.globalViewSettings,
       globalReadSettings: settings.globalReadSettings,
+      ...(settings.translationFileSync ? { translationSettingsChanged: true } : {}),
     };
     if (opts.includeCloudSyncProviders) {
       payload.cloudSyncProviders = {

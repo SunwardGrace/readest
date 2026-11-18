@@ -48,9 +48,31 @@ reading progress and notes, then run synchronization. Use the same server and
 root on both devices.
 
 WebDAV sync covers the library, book files, reading progress and notes. It does
-not replace all account-level synchronization: global settings, reading
-statistics, dictionaries/fonts and translator configuration need separate
-configuration or backup. No Readest Cloud account is needed for this setup.
+not replace all account-level synchronization: unrelated global settings, reading
+statistics and dictionaries/fonts need separate configuration or backup.
+No Readest Cloud account is needed for this setup.
+
+This personal build also offers **Translation settings sync** in the WebDAV
+panel. On the device with your preferred configuration, choose **Start with
+this device**, then copy its pairing code. On each other device, enter that
+code and choose **Use settings from another device**. Initial pairing adopts
+the remote translation configuration; subsequent edits merge by translator or
+prompt ID and by default-selection field. Deletions are retained, and concurrent
+edits to the same entry use its latest edit timestamp with a stable device-ID
+tie break.
+
+The option syncs custom translators (including API keys), named prompts,
+selection/full-text translation defaults and contextual-dictionary translator
+and prompt settings. It preserves device paths, layout and WebDAV credentials.
+It does not replace per-book translation overrides. Edits sync automatically;
+foreground checks and periodic pulls receive changes from other devices.
+
+All translation documents are encrypted with AES-256-GCM before upload and
+stored separately under `Readest/translation-settings-v1`. The random pairing
+key stays on the device and is excluded from settings backups. Keep a private
+copy of the pairing code to connect another device later. Pausing the option
+stops exchanges and keeps the local configuration. Both devices need a build
+with this feature; older clients continue syncing their books as before.
 
 Service addresses, API keys, WebDAV passwords and signing keys belong outside
 Git. A service reachable only over Tailscale requires Tailscale on each device.

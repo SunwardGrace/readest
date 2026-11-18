@@ -7,7 +7,11 @@ import { HighlightColor, HighlightStyle, UserHighlightColor, ViewSettings } from
 import { OPDSCatalog } from './opds';
 import { WebSource } from './webSource';
 import { ABSServer } from './audiobookshelf';
-import type { CustomTranslator, TranslationPrompt } from './translation';
+import type {
+  CustomTranslator,
+  TranslationPrompt,
+  TranslationFileSyncSettings,
+} from './translation';
 import type { CustomTTSService } from './customTTS';
 import type { AISettings } from '@/services/ai/types';
 import type { CoverSearchEngine } from '@/services/metadata/coverSearch';
@@ -599,6 +603,7 @@ export interface SystemSettings {
   customTranslators?: CustomTranslator[];
   /** User translation prompts; synced as `translation_prompt`. */
   translationPrompts?: TranslationPrompt[];
+  translationFileSync?: TranslationFileSyncSettings;
   /** User OpenAI-compatible speech services; synced as `custom_tts`. */
   customTTSServices?: CustomTTSService[];
   /** Saved sites for the "From Web Browser" import (#5775). Device-local. */

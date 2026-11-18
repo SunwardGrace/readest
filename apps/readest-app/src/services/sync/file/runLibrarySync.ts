@@ -25,6 +25,7 @@ import {
 } from '@/services/sync/file/providerRegistry';
 import { createAppLocalStore } from '@/services/sync/file/appLocalStore';
 import { FileSyncEngine, type SyncLibraryResult } from '@/services/sync/file/engine';
+import { runTranslationSettingsSync } from './runTranslationSync';
 
 /**
  * Whether a backend's transport can work at all right now. Web Google Drive
@@ -215,6 +216,9 @@ export const runFileLibrarySyncPass = async (
     const held = useFileSyncStore.getState().activeKind;
     useFileSyncStore.getState().endSync(held ?? backends[0]!);
   }
+  // Translation sync has its own status; a pairing/key error must not fail
+  // a healthy library transfer.
+  await runTranslationSettingsSync(envConfig).catch(() => {});
   return merged;
 };
 

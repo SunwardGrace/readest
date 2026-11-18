@@ -5,6 +5,7 @@ import { SystemSettings } from '@/types/settings';
 import { EnvConfigType } from '@/services/environment';
 import { initDayjs } from '@/utils/time';
 import { broadcastGlobalSettings } from '@/utils/settingsSync';
+import { trackTranslations } from '@/services/sync/file/translationSettings';
 
 export type FontPanelView = 'main-fonts' | 'custom-fonts';
 
@@ -28,7 +29,7 @@ interface SettingsState {
    * Integrations recognises 'kosync' | 'readwise' | 'hardcover' | 'opds'.
    */
   requestedSubPage: string | null;
-  setSettings: (settings: SystemSettings) => void;
+  setSettings: (settings: SystemSettings, trackTranslationEdits?: boolean) => void;
   saveSettings: (envConfig: EnvConfigType, settings: SystemSettings) => Promise<void>;
   setSettingsDialogBookKey: (bookKey: string) => void;
   setSettingsDialogOpen: (open: boolean) => void;
@@ -48,7 +49,14 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   activeSettingsItemId: null,
   requestedPanel: null,
   requestedSubPage: null,
-  setSettings: (settings) =>
+  setSettings: (settings, trackTranslationEdits = true) => {
+    if (trackTranslationEdits && settings.translationFileSync) {
+      const sync = settings.translationFileSync;
+      const records = trackTranslations(sync.records, settings, sync.writer, Date.now());
+      // Callers commonly save the same object immediately after setSettings.
+      // Keep the edit clock in that object too, including in-place UI updates.
+      if (records !== sync.records) settings.translationFileSync = { ...sync, records };
+    }
     set((state) => ({
       // An unrelated `{ ...settings, someField }` write carries the very state
       // already stored, so skip the merge and keep the reference stable — the
@@ -60,7 +68,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
               bookshelves: mergeBookshelfStates(state.settings.bookshelves, settings.bookshelves),
             }
           : settings,
-    })),
+    }));
+  },
   saveSettings: async (envConfig: EnvConfigType, settings: SystemSettings) => {
     const appService = await envConfig.getAppService();
     await appService.saveSettings(settings);

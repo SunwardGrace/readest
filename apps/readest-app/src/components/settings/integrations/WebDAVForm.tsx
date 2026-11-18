@@ -15,6 +15,7 @@ import { SectionTitle } from '../primitives';
 import FileSyncForm from './FileSyncForm';
 import WebDAVBrowsePane from './WebDAVBrowsePane';
 import { persistCloudProviderEnabled } from './cloudSync';
+import TranslationSyncSection from './TranslationSyncSection';
 
 /**
  * Translate a connection-probe failure into a user-facing string. Each branch is
@@ -110,6 +111,7 @@ const WebDAVForm: React.FC = () => {
     return (
       <div className='space-y-5'>
         <FileSyncForm kind='webdav' stored={stored} persist={persistWebdav} />
+        <TranslationSyncSection />
 
         <WebDAVBrowsePane settings={stored} onUpdateSettings={persistWebdav} />
 
